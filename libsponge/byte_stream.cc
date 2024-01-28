@@ -12,13 +12,14 @@ void DUMMY_CODE(Targs &&... /* unused */) {}
 
 using namespace std;
 
-ByteStream::ByteStream(const size_t capacity) : m_maxCapacity(capacity), m_writeLen(0), 
-m_readLen(0) {  }
+ByteStream::ByteStream(const size_t capacity) : m_buffer(capacity + 1), m_maxCapacity(capacity), m_writeLen(0), 
+m_readLen(0), m_head(0), m_tail(m_maxCapacity) {  }
 
 size_t ByteStream::write(const string &data) {
     auto ret = min(data.size(), remaining_capacity());
     for(size_t i = 0; i < ret; i++) {
-        container.push_back(data[i]);
+        m_tail = (m_tail + 1) % (m_maxCapacity + 1);
+        m_buffer[m_tail] = data[i];
     }
     m_writeLen += ret;
     return ret;    
@@ -32,7 +33,7 @@ string ByteStream::peek_output(const size_t len) const {
     
     // 将 real_len 长度的字符合并成字符串并返回
     for(size_t i = 0; i < real_len; i++) {
-        retVal += container[i];
+        retVal.push_back(m_buffer[(m_head + i) % (m_maxCapacity + 1)]);
     }
 
     return retVal;
@@ -43,10 +44,7 @@ void ByteStream::pop_output(const size_t len) {
     // 先比较需要移除的长度和现有数据的长度，取两者中的较小值
     auto real_len = min(len, buffer_size());
 
-    // 移除 real_len 次数据
-    for(size_t i = 0; i < real_len; i++) {
-        container.pop_front();
-    }
+    m_head = (m_head + real_len) % (m_maxCapacity + 1);
     m_readLen += real_len;
 }
 
@@ -54,14 +52,8 @@ void ByteStream::pop_output(const size_t len) {
 //! \param[in] len bytes will be popped and returned
 //! \returns a string
 std::string ByteStream::read(const size_t len) {
-    string ret_val;
-    //先比较需要读取的数据的长度和现有的数据的长度，取两者中的较小值
-    auto real_len = min(len, buffer_size());
-    for(size_t i = 0; i < real_len; i++) {
-        ret_val += container.front();
-        container.pop_front();
-    }
-    m_readLen += real_len;
+    auto ret_val = peek_output(len);
+    pop_output(len);
     return ret_val;
 }
 
@@ -69,9 +61,10 @@ void ByteStream::end_input() {_input_ended_flag = true;}
 
 bool ByteStream::input_ended() const { return _input_ended_flag; }
 
-size_t ByteStream::buffer_size() const { return container.size(); }
+// 加上 m_maxcapacity + 1 , 是为了防止 m_tail - m_head 出现负数的情况
+size_t ByteStream::buffer_size() const { return (m_tail - m_head + 1 + m_maxCapacity + 1) % (m_maxCapacity + 1); }
 
-bool ByteStream::buffer_empty() const { return container.empty();}
+bool ByteStream::buffer_empty() const { return buffer_size() == 0;}
 
 bool ByteStream::eof() const { return _input_ended_flag && buffer_empty(); }
 

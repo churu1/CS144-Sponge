@@ -12,11 +12,11 @@
 class ByteStream {
   private:
     // Your code here -- add private members as necessary.
-    std::deque<char> container; // 相当于缓冲区，用于存放需要读取的数据
+    std::vector<char> m_buffer; // 相当于缓冲区，用于存放需要读取的数据
     int m_maxCapacity; // 窗口的最大容量
-    int m_writeLen; // writer 每次写入的长度
-    int m_readLen; // reader 读取的长度
-
+    int m_writeLen; // writer 总共写入的长度
+    int m_readLen; // reader 总共读取的长度
+    int m_head, m_tail; // 标记数组的头和尾
     bool _input_ended_flag = false;
 
     // Hint: This doesn't need to be a sophisticated data structure at
